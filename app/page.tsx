@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useMemo, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { parseAlbumCsv, parseAlbumTextImport } from "@/lib/csv";
 import type { AlbumInputRow, AlbumWorkRow, SearchCandidate } from "@/lib/types";
 
@@ -15,6 +15,19 @@ type DownloadApiResponse = {
   error?: string;
 };
 
+type SpotifyImportApiResponse = {
+  rows?: Array<{
+    artist: string;
+    album: string;
+    spotifyAlbumUrl?: string;
+    spotifyImageUrl?: string;
+  }>;
+  totalTracks?: number;
+  uniqueAlbums?: number;
+  loginUrl?: string;
+  error?: string;
+};
+
 export default function Home() {
   const [rows, setRows] = useState<AlbumWorkRow[]>([]);
   const [csvErrors, setCsvErrors] = useState<string[]>([]);
@@ -23,6 +36,13 @@ export default function Home() {
     success: number;
     failed: number;
   } | null>(null);
+  const [spotifyPlaylistUrl, setSpotifyPlaylistUrl] = useState("");
+  const [spotifyMessage, setSpotifyMessage] = useState<string | null>(null);
+  const [spotifyStats, setSpotifyStats] = useState<{
+    totalTracks: number;
+    uniqueAlbums: number;
+  } | null>(null);
+  const [isImportingSpotify, setIsImportingSpotify] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -30,10 +50,35 @@ export default function Home() {
     () => rows.filter((row) => row.confirmed && row.status === "found").length,
     [rows],
   );
-  const searchableCount = useMemo(
-    () => rows.filter((row) => row.status !== "invalid").length,
+  const foundCount = useMemo(
+    () => rows.filter((row) => row.status === "found").length,
     [rows],
   );
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const returnedPlaylistUrl = params.get("spotifyPlaylistUrl");
+    const spotifyStatus = params.get("spotify");
+    const spotifyError = params.get("spotifyError");
+
+    if (returnedPlaylistUrl) {
+      setSpotifyPlaylistUrl(returnedPlaylistUrl);
+    }
+
+    if (spotifyStatus === "connected") {
+      setSpotifyMessage("Spotify connected. Click Import Playlist to load albums.");
+    }
+
+    if (spotifyError) {
+      const messages: Record<string, string> = {
+        missing_client_id: "Set SPOTIFY_CLIENT_ID in .env.local before using Spotify import.",
+        invalid_playlist_url: "Invalid Spotify playlist URL.",
+        auth_failed: "Spotify authorization failed.",
+        token_failed: "Spotify token exchange failed.",
+      };
+      setSpotifyMessage(messages[spotifyError] ?? "Spotify import failed.");
+    }
+  }, []);
 
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -43,17 +88,17 @@ export default function Home() {
     const parsed = parseAlbumCsv(text);
     setCsvErrors(parsed.errors);
     setTextImportStats(null);
-    setRows(toWorkRows(parsed.rows));
+    await importRowsAndSearch(toWorkRows(parsed.rows));
   }
 
-  function handleTextImport() {
+  async function handleTextImport() {
     const parsed = parseAlbumTextImport(textImportValue);
     setCsvErrors([]);
     setTextImportStats({
       success: parsed.rows.length,
       failed: parsed.invalidRows.length,
     });
-    setRows([
+    await importRowsAndSearch([
       ...toWorkRows(parsed.rows),
       ...parsed.invalidRows.map((row) => ({
         ...row,
@@ -66,21 +111,75 @@ export default function Home() {
     ]);
   }
 
-  async function searchAll() {
-    if (searchableCount === 0 || isSearching) return;
+  async function importRowsAndSearch(nextRows: AlbumWorkRow[]) {
+    setRows(nextRows);
+    await searchRows(nextRows);
+  }
+
+  async function handleSpotifyImport() {
+    const playlistUrl = spotifyPlaylistUrl.trim();
+    if (!playlistUrl || isImportingSpotify) return;
+
+    setIsImportingSpotify(true);
+    setSpotifyMessage("Importing Spotify playlist...");
+    setSpotifyStats(null);
+
+    try {
+      const response = await fetch(
+        `/api/spotify/playlist?playlistUrl=${encodeURIComponent(playlistUrl)}`,
+      );
+      const data = (await response.json()) as SpotifyImportApiResponse;
+
+      if (response.status === 401 && data.loginUrl) {
+        window.location.href = data.loginUrl;
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "Spotify import failed");
+      }
+
+      const importedRows: AlbumInputRow[] = (data.rows ?? []).map((row) => ({
+        id: crypto.randomUUID(),
+        artist: row.artist.trim(),
+        album: row.album.trim(),
+        rawInput: `${row.artist} - ${row.album}`,
+        spotifyAlbumUrl: row.spotifyAlbumUrl,
+        spotifyImageUrl: row.spotifyImageUrl,
+      }));
+
+      setCsvErrors([]);
+      setTextImportStats(null);
+      await importRowsAndSearch(toWorkRows(importedRows));
+      setSpotifyStats({
+        totalTracks: data.totalTracks ?? 0,
+        uniqueAlbums: data.uniqueAlbums ?? importedRows.length,
+      });
+      setSpotifyMessage(
+        `Imported ${data.uniqueAlbums ?? importedRows.length} unique albums and started cover search.`,
+      );
+    } catch (error) {
+      setSpotifyMessage(error instanceof Error ? error.message : "Spotify import failed");
+    } finally {
+      setIsImportingSpotify(false);
+    }
+  }
+
+  async function searchRows(nextRows: AlbumWorkRow[]) {
+    const targets = nextRows.filter((row) => row.status !== "invalid");
+    if (targets.length === 0 || isSearching) return;
 
     setIsSearching(true);
-    for (const row of rows.filter((item) => item.status !== "invalid")) {
-      await searchOne(row.id);
+    for (const row of targets) {
+      await searchOne(row);
     }
     setIsSearching(false);
   }
 
-  async function searchOne(rowId: string) {
-    const row = rowsRef(rowId);
-    if (!row || row.status === "invalid") return;
+  async function searchOne(row: AlbumWorkRow) {
+    if (row.status === "invalid") return;
 
-    updateRow(rowId, { status: "searching", message: undefined });
+    updateRow(row.id, { status: "searching", message: undefined });
 
     try {
       const response = await fetch("/api/search", {
@@ -95,7 +194,7 @@ export default function Home() {
       }
 
       const candidates = data.candidates ?? [];
-      updateRow(rowId, {
+      updateRow(row.id, {
         candidates,
         selectedIndex: 0,
         confirmed: false,
@@ -103,7 +202,7 @@ export default function Home() {
         message: candidates.length > 0 ? undefined : "Not Found",
       });
     } catch (error) {
-      updateRow(rowId, {
+      updateRow(row.id, {
         status: "error",
         message: error instanceof Error ? error.message : "Search failed",
       });
@@ -163,6 +262,14 @@ export default function Home() {
     );
   }
 
+  function confirmAllFound() {
+    setRows((currentRows) =>
+      currentRows.map((row) =>
+        row.status === "found" ? { ...row, confirmed: true } : row,
+      ),
+    );
+  }
+
   function rowsRef(rowId: string) {
     return rows.find((row) => row.id === rowId);
   }
@@ -170,40 +277,28 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-paper">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-5 py-6">
-        <header className="flex flex-col justify-between gap-4 border-b border-stone-300 pb-5 md:flex-row md:items-end">
+        <header className="border-b border-stone-300 pb-5">
           <div>
             <h1 className="text-2xl font-semibold tracking-normal text-ink">
-              Album Cover Batch Downloader
+              Coverdrop - Album Cover Batch Downloader
             </h1>
-            <p className="mt-1 text-sm text-stone-600">CSV: artist, album</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              className="rounded-md bg-moss px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:bg-stone-400"
-              disabled={searchableCount === 0 || isSearching}
-              onClick={searchAll}
-              type="button"
-            >
-              {isSearching ? "Searching..." : "Search All"}
-            </button>
-            <button
-              className="rounded-md bg-clay px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:bg-stone-400"
-              disabled={confirmedCount === 0 || isDownloading}
-              onClick={downloadConfirmed}
-              type="button"
-            >
-              {isDownloading ? "Downloading..." : `Download ${confirmedCount}`}
-            </button>
+            <p className="mt-1 text-sm text-stone-600">A local Next.js tool for batch searching and downloading album covers</p>
           </div>
         </header>
 
-        <section className="grid gap-4 md:grid-cols-[minmax(220px,0.8fr)_minmax(360px,1.2fr)]">
+        <section className="grid gap-4 lg:grid-cols-[minmax(220px,0.7fr)_minmax(340px,1fr)_minmax(320px,1fr)]">
           <div className="rounded-md border border-stone-300 bg-white p-4 shadow-sm">
             <div className="text-sm font-semibold text-ink">CSV Import</div>
             <p className="mt-1 text-xs text-stone-500">Header fields: artist, album</p>
             <label className="mt-4 inline-flex cursor-pointer rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-ink shadow-sm hover:border-moss">
               Upload CSV
-              <input accept=".csv,text/csv" className="sr-only" type="file" onChange={handleFileChange} />
+              <input
+                accept=".csv,text/csv"
+                className="sr-only"
+                disabled={isSearching}
+                type="file"
+                onChange={handleFileChange}
+              />
             </label>
           </div>
 
@@ -229,13 +324,77 @@ export default function Home() {
               <span className="text-xs text-stone-500">Empty lines are ignored.</span>
               <button
                 className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:bg-stone-400"
-                disabled={!textImportValue.trim()}
+                disabled={!textImportValue.trim() || isSearching}
                 onClick={handleTextImport}
                 type="button"
               >
-                Import Text
+                {isSearching ? "Searching..." : "Import"}
               </button>
             </div>
+          </div>
+
+          <div className="rounded-md border border-stone-300 bg-white p-4 shadow-sm">
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+              <div>
+                <div className="text-sm font-semibold text-ink">Spotify Playlist Import</div>
+                <p className="mt-1 text-xs text-stone-500">OAuth import, albums only</p>
+              </div>
+              {spotifyStats ? (
+                <div className="text-xs font-medium text-stone-600">
+                  Tracks {spotifyStats.totalTracks} / Albums {spotifyStats.uniqueAlbums}
+                </div>
+              ) : null}
+            </div>
+            <input
+              className="mt-3 w-full rounded-md border border-stone-300 px-3 py-2 text-sm outline-none focus:border-moss"
+              onChange={(event) => setSpotifyPlaylistUrl(event.target.value)}
+              placeholder="https://open.spotify.com/playlist/..."
+              type="url"
+              value={spotifyPlaylistUrl}
+            />
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <span className="truncate text-xs text-stone-500">
+                Covers are rematched via iTunes.
+              </span>
+              <button
+                className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:bg-stone-400"
+                disabled={!spotifyPlaylistUrl.trim() || isImportingSpotify || isSearching}
+                onClick={handleSpotifyImport}
+                type="button"
+              >
+                {isImportingSpotify ? "Importing..." : isSearching ? "Searching..." : "Import"}
+              </button>
+            </div>
+            {spotifyMessage ? (
+              <div className="mt-3 rounded border border-stone-200 bg-stone-50 px-3 py-2 text-xs text-stone-700">
+                {spotifyMessage}
+              </div>
+            ) : null}
+          </div>
+        </section>
+
+        <section className="flex flex-col justify-between gap-3 rounded-md border border-stone-300 bg-white px-4 py-3 shadow-sm md:flex-row md:items-center">
+          <div className="text-sm text-stone-600">
+            {rows.length} rows loaded / {foundCount} found / {confirmedCount} confirmed
+            {isSearching ? " / searching..." : ""}
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              className="rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-ink shadow-sm disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400"
+              disabled={foundCount === 0}
+              onClick={confirmAllFound}
+              type="button"
+            >
+              Select All
+            </button>
+            <button
+              className="rounded-md bg-clay px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:bg-stone-400"
+              disabled={confirmedCount === 0 || isDownloading}
+              onClick={downloadConfirmed}
+              type="button"
+            >
+              {isDownloading ? "Downloading..." : `Download ${confirmedCount}`}
+            </button>
           </div>
         </section>
 

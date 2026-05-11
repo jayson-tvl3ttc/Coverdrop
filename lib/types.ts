@@ -4,6 +4,8 @@ export type AlbumInputRow = {
   album: string;
   sourceLine?: number;
   rawInput?: string;
+  spotifyAlbumUrl?: string;
+  spotifyImageUrl?: string;
 };
 
 export type SearchCandidate = {
