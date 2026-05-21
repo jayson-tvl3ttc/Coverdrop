@@ -23,8 +23,22 @@ export async function searchITunesAlbums(
   artist: string,
   album: string,
 ): Promise<SearchCandidate[]> {
+  return searchITunesAlbumTerm(`${artist} ${album}`, { artist, album });
+}
+
+export async function searchITunesAlbumsByQuery(query: string): Promise<SearchCandidate[]> {
+  return searchITunesAlbumTerm(query);
+}
+
+async function searchITunesAlbumTerm(
+  term: string,
+  expected?: {
+    artist: string;
+    album: string;
+  },
+): Promise<SearchCandidate[]> {
   const url = new URL("https://itunes.apple.com/search");
-  url.searchParams.set("term", `${artist} ${album}`);
+  url.searchParams.set("term", term);
   url.searchParams.set("media", "music");
   url.searchParams.set("entity", "album");
   url.searchParams.set("limit", "8");
@@ -56,7 +70,16 @@ export async function searchITunesAlbums(
       trackCount: item.trackCount,
     }))
     .filter((candidate) => candidate.artworkUrl)
-    .sort((left, right) => scoreCandidate(right, artist, album) - scoreCandidate(left, artist, album));
+    .sort((left, right) => {
+      if (!expected) {
+        return 0;
+      }
+
+      return (
+        scoreCandidate(right, expected.artist, expected.album) -
+        scoreCandidate(left, expected.artist, expected.album)
+      );
+    });
 }
 
 export function upgradeArtworkUrl(url: string): string {

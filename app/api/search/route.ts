@@ -1,19 +1,26 @@
 import { NextResponse } from "next/server";
-import { searchITunesAlbums } from "@/lib/itunes";
+import { searchITunesAlbums, searchITunesAlbumsByQuery } from "@/lib/itunes";
 
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
       artist?: string;
       album?: string;
+      query?: string;
     };
 
     const artist = body.artist?.trim();
     const album = body.album?.trim();
+    const query = body.query?.trim();
+
+    if (query) {
+      const candidates = await searchITunesAlbumsByQuery(query);
+      return NextResponse.json({ candidates });
+    }
 
     if (!artist || !album) {
       return NextResponse.json(
-        { error: "artist and album are required" },
+        { error: "query or artist and album are required" },
         { status: 400 },
       );
     }

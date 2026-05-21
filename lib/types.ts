@@ -2,6 +2,7 @@ export type AlbumInputRow = {
   id: string;
   artist: string;
   album: string;
+  query?: string;
   sourceLine?: number;
   rawInput?: string;
   spotifyAlbumUrl?: string;

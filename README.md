@@ -22,11 +22,12 @@ http://127.0.0.1:3000
 - Import albums from CSV files.
 - Import albums from pasted plain text.
 - Import albums from Spotify playlists via Spotify Web API OAuth.
-- Convert imports into an `artist + album` list.
+- Convert CSV and Spotify imports into an `artist + album` list.
+- Treat every non-empty text import line as a free-text album search query.
 - Automatically search for cover matches after import.
 - Show album name, artist name, match status, and cover preview.
 - Mark missing matches as `Not Found`.
-- Mark unparseable text rows as `Invalid`.
+- Mark searches with no usable album results as `Not Found`.
 - Select all found matches for batch confirmation.
 - Download confirmed covers to the local `covers` directory.
 
@@ -46,18 +47,17 @@ After upload, Coverdrop automatically starts searching for cover matches.
 
 ## Text import
 
-Paste one album per line. Empty lines are ignored.
+Paste one album search query per line. Empty lines are ignored.
 
-Supported formats:
+Examples:
 
 ```text
-artist - album
-artist, album
-artist / album
-artist | album
+Radiohead OK Computer
+Radiohead - OK Computer
+Daft Punk Discovery
 ```
 
-Rows that cannot be parsed are kept in the results table and marked as `Invalid`.
+Text import does not require `artist + album` formatting or delimiters. Each line is sent to the search API as a full query, with light normalization for common separators. `Not Found` is only shown when the search API returns zero usable album results.
 
 ## Spotify playlist import
 

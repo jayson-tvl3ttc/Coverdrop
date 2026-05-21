@@ -10,8 +10,6 @@ export type TextImportParseResult = {
   invalidRows: AlbumInputRow[];
 };
 
-const TEXT_DELIMITERS = [" - ", ",", "/", "|"];
-
 export function parseAlbumCsv(input: string): CsvParseResult {
   const table = parseCsv(input);
   const errors: string[] = [];
@@ -55,7 +53,6 @@ export function parseAlbumCsv(input: string): CsvParseResult {
 
 export function parseAlbumTextImport(input: string): TextImportParseResult {
   const rows: AlbumInputRow[] = [];
-  const invalidRows: AlbumInputRow[] = [];
 
   input.split(/\r?\n/).forEach((line, index) => {
     const rawInput = line.trim();
@@ -65,46 +62,21 @@ export function parseAlbumTextImport(input: string): TextImportParseResult {
       return;
     }
 
-    const parsed = parseAlbumTextLine(rawInput);
-    if (!parsed) {
-      invalidRows.push({
-        id: crypto.randomUUID(),
-        artist: rawInput,
-        album: "",
-        sourceLine,
-        rawInput,
-      });
-      return;
-    }
-
     rows.push({
       id: crypto.randomUUID(),
-      artist: parsed.artist,
-      album: parsed.album,
+      artist: "",
+      album: "",
+      query: normalizeTextQuery(rawInput),
       sourceLine,
       rawInput,
     });
   });
 
-  return { rows, invalidRows };
+  return { rows, invalidRows: [] };
 }
 
-function parseAlbumTextLine(line: string): Pick<AlbumInputRow, "artist" | "album"> | null {
-  for (const delimiter of TEXT_DELIMITERS) {
-    const delimiterIndex = line.indexOf(delimiter);
-    if (delimiterIndex === -1) {
-      continue;
-    }
-
-    const artist = line.slice(0, delimiterIndex).trim();
-    const album = line.slice(delimiterIndex + delimiter.length).trim();
-
-    if (artist && album) {
-      return { artist, album };
-    }
-  }
-
-  return null;
+function normalizeTextQuery(input: string): string {
+  return input.replace(/\s+[-,/|]\s+/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function parseCsv(input: string): string[][] {

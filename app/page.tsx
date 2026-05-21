@@ -34,7 +34,6 @@ export default function Home() {
   const [textImportValue, setTextImportValue] = useState("");
   const [textImportStats, setTextImportStats] = useState<{
     success: number;
-    failed: number;
   } | null>(null);
   const [spotifyPlaylistUrl, setSpotifyPlaylistUrl] = useState("");
   const [spotifyMessage, setSpotifyMessage] = useState<string | null>(null);
@@ -96,19 +95,8 @@ export default function Home() {
     setCsvErrors([]);
     setTextImportStats({
       success: parsed.rows.length,
-      failed: parsed.invalidRows.length,
     });
-    await importRowsAndSearch([
-      ...toWorkRows(parsed.rows),
-      ...parsed.invalidRows.map((row) => ({
-        ...row,
-        status: "invalid" as const,
-        candidates: [],
-        selectedIndex: 0,
-        confirmed: false,
-        message: row.sourceLine ? `Line ${row.sourceLine}: Invalid` : "Invalid",
-      })),
-    ]);
+    await importRowsAndSearch(toWorkRows(parsed.rows));
   }
 
   async function importRowsAndSearch(nextRows: AlbumWorkRow[]) {
@@ -185,7 +173,11 @@ export default function Home() {
       const response = await fetch("/api/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ artist: row.artist, album: row.album }),
+        body: JSON.stringify(
+          row.query
+            ? { query: row.query }
+            : { artist: row.artist, album: row.album },
+        ),
       });
       const data = (await response.json()) as SearchApiResponse;
 
@@ -232,8 +224,8 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          artist: row.artist,
-          album: row.album,
+          artist: candidate.artistName || row.artist,
+          album: candidate.collectionName || row.album || row.rawInput,
           artworkUrl: candidate.artworkUrl,
         }),
       });
@@ -306,18 +298,18 @@ export default function Home() {
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
               <div>
                 <div className="text-sm font-semibold text-ink">Text Import</div>
-                <p className="mt-1 text-xs text-stone-500">artist - album, artist, album, artist / album, artist | album</p>
+                <p className="mt-1 text-xs text-stone-500">One free-text album query per line</p>
               </div>
               {textImportStats ? (
                 <div className="text-xs font-medium text-stone-600">
-                  Parsed {textImportStats.success} / Invalid {textImportStats.failed}
+                  Parsed {textImportStats.success}
                 </div>
               ) : null}
             </div>
             <textarea
               className="mt-3 min-h-28 w-full resize-y rounded-md border border-stone-300 px-3 py-2 text-sm outline-none focus:border-moss"
               onChange={(event) => setTextImportValue(event.target.value)}
-              placeholder={"Radiohead - In Rainbows\nDaft Punk, Discovery\nBjork / Homogenic"}
+              placeholder={"Radiohead OK Computer\nRadiohead - In Rainbows\nDaft Punk Discovery"}
               value={textImportValue}
             />
             <div className="mt-3 flex items-center justify-between gap-3">
@@ -417,7 +409,7 @@ export default function Home() {
 
           {rows.length === 0 ? (
             <div className="px-4 py-12 text-center text-sm text-stone-500">
-              Upload a CSV file or paste text to begin.
+              Upload CSV, paste text, or import a Spotify playlist to begin.
             </div>
           ) : (
             rows.map((row) => <ResultRow key={row.id} row={row} updateRow={updateRow} />)
@@ -464,9 +456,11 @@ function ResultRow({
 
       <div className="min-w-0">
         <div className="truncate text-sm font-semibold text-ink">
-          {row.status === "invalid" ? row.rawInput ?? row.artist : row.album}
+          {row.rawInput ?? row.album}
         </div>
-        <div className="truncate text-sm text-stone-600">{row.artist}</div>
+        <div className="truncate text-sm text-stone-600">
+          {row.rawInput ? "Free-text search" : row.artist}
+        </div>
       </div>
 
       <div className="min-w-0">
