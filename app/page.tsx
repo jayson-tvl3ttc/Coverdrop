@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type ChangeEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { parseAlbumCsv, parseAlbumTextImport } from "@/lib/csv";
 import type { AlbumInputRow, AlbumWorkRow, SearchCandidate } from "@/lib/types";
 
@@ -289,56 +289,76 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-white text-neutral-950">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-5 py-8 sm:px-8 lg:py-12">
-        <header className="flex flex-col justify-between gap-4 border-b border-neutral-200 pb-6 md:flex-row md:items-end">
+    <main className="min-h-screen bg-[#f7f7f5] text-neutral-950">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-7 px-4 py-8 sm:px-8 lg:px-10 lg:py-12">
+        <header className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
           <div>
-            <p className="text-xs font-medium uppercase tracking-[0.18em] text-neutral-500">Coverdrop</p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-normal text-neutral-950 sm:text-4xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.26em] text-neutral-600">COVERDROP</p>
+            <h1 className="mt-6 text-4xl font-bold tracking-normal text-neutral-950 sm:text-5xl">
               Album cover search
             </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
+            <p className="mt-4 max-w-2xl text-base font-normal leading-7 text-neutral-600">
               Search and download album covers in bulk.
             </p>
           </div>
-          <div className="text-sm text-neutral-500">
-            {rows.length} rows / {foundCount} found / {confirmedCount} selected
-            {isSearching ? " / searching" : ""}
+          <div className="flex w-full flex-wrap items-center gap-3 rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-medium text-neutral-700 shadow-[0_12px_35px_rgba(0,0,0,0.05)] md:w-auto">
+            <StatItem icon={<RowsIcon />} label="rows" value={rows.length} />
+            <StatDivider />
+            <StatItem icon={<SearchSmallIcon />} label="found" value={foundCount} />
+            <StatDivider />
+            <StatItem icon={<SelectedIcon />} label="selected" value={confirmedCount} />
+            {isSearching ? (
+              <>
+                <StatDivider />
+                <span className="text-neutral-500">searching</span>
+              </>
+            ) : null}
           </div>
         </header>
 
-        <section className="border-b border-neutral-200 pb-10">
-          <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-            <div>
-              <h2 className="text-lg font-semibold text-neutral-950">Text Search</h2>
-              <p className="mt-1 text-sm text-neutral-500">Paste one album search per line.</p>
+        <section className="rounded-[24px] border border-neutral-200 bg-white p-5 shadow-[0_18px_55px_rgba(0,0,0,0.07)] sm:p-7">
+          <div className="mb-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+            <div className="flex gap-4">
+              <IconBadge tone="dark">
+                <SearchIcon />
+              </IconBadge>
+              <div>
+                <h2 className="text-lg font-semibold text-neutral-950">1. Text Search</h2>
+                <p className="mt-1 text-sm font-normal text-neutral-600">Paste one album search per line.</p>
+              </div>
             </div>
             {textImportStats ? (
-              <div className="text-sm text-neutral-500">{textImportStats.success} queries imported</div>
+              <div className="rounded-full border border-neutral-200 px-3 py-1 text-sm font-medium text-neutral-500">
+                {textImportStats.success} queries imported
+              </div>
             ) : null}
           </div>
 
           <textarea
             ref={textAreaRef}
-            className="min-h-64 w-full resize-y rounded-none border border-neutral-300 bg-white px-5 py-4 text-base leading-7 text-neutral-950 outline-none transition focus:border-neutral-950"
+            className="min-h-64 w-full resize-y rounded-2xl border border-neutral-200 bg-white px-5 py-4 text-base font-normal leading-7 text-neutral-950 outline-none transition placeholder:text-neutral-400 focus:border-neutral-950 focus:ring-4 focus:ring-neutral-950/5"
             onChange={(event) => setTextImportValue(event.target.value)}
             placeholder={"Radiohead OK Computer\nOasis\nMy Bloody Valentine Loveless"}
             value={textImportValue}
           />
 
-          <div className="mt-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-            <p className="text-sm text-neutral-500">Free text is sent as a search query. Empty lines are ignored.</p>
+          <div className="mt-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+            <p className="flex items-center gap-2 text-sm font-normal text-neutral-500">
+              <InfoIcon />
+              Free text is sent as a search query. Empty lines are ignored.
+            </p>
             <div className="flex flex-wrap gap-3">
               <button
-                className="border border-neutral-950 bg-neutral-950 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:border-neutral-300 disabled:bg-neutral-300"
+                className="inline-flex items-center gap-2 rounded-lg border border-neutral-950 bg-neutral-950 px-6 py-3 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(0,0,0,0.18)] transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:border-neutral-300 disabled:bg-neutral-300 disabled:shadow-none"
                 disabled={!textImportValue.trim() || isSearching}
                 onClick={handleTextImport}
                 type="button"
               >
+                <SearchSmallIcon />
                 {isSearching ? "Searching..." : "Search Covers"}
               </button>
               <button
-                className="border border-neutral-300 bg-white px-5 py-2.5 text-sm font-medium text-neutral-950 transition hover:border-neutral-950 disabled:cursor-not-allowed disabled:text-neutral-400"
+                className="rounded-lg border border-neutral-200 bg-white px-6 py-3 text-sm font-semibold text-neutral-950 transition hover:border-neutral-950 disabled:cursor-not-allowed disabled:text-neutral-400"
                 disabled={!textImportValue && rows.length === 0}
                 onClick={handleClearTextSearch}
                 type="button"
@@ -349,20 +369,28 @@ export default function Home() {
           </div>
         </section>
 
-        <details className="group border-b border-neutral-200 pb-8">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-medium text-neutral-950">
-            <span>Other import methods</span>
-            <span className="text-neutral-400 transition group-open:rotate-45">+</span>
+        <details className="group rounded-[20px] border border-neutral-200 bg-white shadow-[0_14px_40px_rgba(0,0,0,0.05)]">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-5 sm:px-7">
+            <div className="flex items-center gap-4">
+              <IconBadge>
+                <UploadIcon />
+              </IconBadge>
+              <div>
+                <h2 className="text-lg font-semibold text-neutral-950">2. Other import methods</h2>
+                <p className="mt-1 text-sm text-neutral-500">CSV and Spotify imports stay available here.</p>
+              </div>
+            </div>
+            <ChevronIcon />
           </summary>
 
-          <div className="mt-6 grid gap-6 lg:grid-cols-2">
-            <section className="border border-neutral-200 p-5">
+          <div className="grid gap-5 border-t border-neutral-100 px-5 pb-5 pt-5 sm:px-7 lg:grid-cols-2">
+            <section className="rounded-2xl border border-neutral-200 p-5">
               <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                 <div>
                   <h3 className="text-sm font-semibold text-neutral-950">CSV Import</h3>
                   <p className="mt-1 text-sm text-neutral-500">Header fields: artist, album</p>
                 </div>
-                <label className="inline-flex cursor-pointer border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-950 transition hover:border-neutral-950">
+                <label className="inline-flex cursor-pointer rounded-lg border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-950 transition hover:border-neutral-950">
                   Upload CSV
                   <input
                     accept=".csv,text/csv"
@@ -374,7 +402,7 @@ export default function Home() {
                 </label>
               </div>
               {csvErrors.length > 0 ? (
-                <div className="mt-4 border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-700">
+                <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-700">
                   {csvErrors.map((error) => (
                     <div key={error}>{error}</div>
                   ))}
@@ -382,7 +410,7 @@ export default function Home() {
               ) : null}
             </section>
 
-            <section className="border border-neutral-200 p-5">
+            <section className="rounded-2xl border border-neutral-200 p-5">
               <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                 <div>
                   <h3 className="text-sm font-semibold text-neutral-950">Spotify Import</h3>
@@ -396,14 +424,14 @@ export default function Home() {
               </div>
               <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                 <input
-                  className="min-w-0 flex-1 border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-950 outline-none transition focus:border-neutral-950"
+                  className="min-w-0 flex-1 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-950 outline-none transition focus:border-neutral-950"
                   onChange={(event) => setSpotifyPlaylistUrl(event.target.value)}
                   placeholder="https://open.spotify.com/playlist/..."
                   type="url"
                   value={spotifyPlaylistUrl}
                 />
                 <button
-                  className="border border-neutral-950 bg-neutral-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:border-neutral-300 disabled:bg-neutral-300"
+                  className="rounded-lg border border-neutral-950 bg-neutral-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:border-neutral-300 disabled:bg-neutral-300"
                   disabled={!spotifyPlaylistUrl.trim() || isImportingSpotify || isSearching}
                   onClick={handleSpotifyImport}
                   type="button"
@@ -412,7 +440,7 @@ export default function Home() {
                 </button>
               </div>
               {spotifyMessage ? (
-                <div className="mt-4 border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-700">
+                <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-700">
                   {spotifyMessage}
                 </div>
               ) : null}
@@ -420,48 +448,60 @@ export default function Home() {
           </div>
         </details>
 
-        <section className="flex flex-col gap-5">
-          <div className="flex flex-col justify-between gap-4 border-b border-neutral-200 pb-4 md:flex-row md:items-center">
-            <div>
-              <h2 className="text-lg font-semibold text-neutral-950">Results</h2>
-              <p className="mt-1 text-sm text-neutral-500">
-                Choose the best match for each query before downloading.
-              </p>
+        <section className="rounded-[20px] border border-neutral-200 bg-white p-5 shadow-[0_14px_40px_rgba(0,0,0,0.05)] sm:p-7">
+          <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
+            <div className="flex gap-4">
+              <IconBadge>
+                <GridIcon />
+              </IconBadge>
+              <div>
+                <h2 className="text-lg font-semibold text-neutral-950">3. Results</h2>
+                <p className="mt-1 text-sm text-neutral-500">
+                  Choose the best match for each query before downloading.
+                </p>
+              </div>
             </div>
             <div className="flex flex-wrap gap-3">
               <button
-                className="border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-950 transition hover:border-neutral-950 disabled:cursor-not-allowed disabled:text-neutral-400"
+                className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-950 transition hover:border-neutral-950 disabled:cursor-not-allowed disabled:text-neutral-400"
                 disabled={foundCount === 0}
                 onClick={confirmAllFound}
                 type="button"
               >
+                <CheckIcon />
                 Select All Found
               </button>
               <button
-                className="border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-950 transition hover:border-neutral-950 disabled:cursor-not-allowed disabled:text-neutral-400"
+                className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-950 transition hover:border-neutral-950 disabled:cursor-not-allowed disabled:text-neutral-400"
                 disabled={foundCount === 0 || isDownloading}
                 onClick={downloadAllFound}
                 type="button"
               >
+                <DownloadIcon />
                 {isDownloading ? "Downloading..." : "Download All Found"}
               </button>
               <button
-                className="border border-neutral-950 bg-neutral-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:border-neutral-300 disabled:bg-neutral-300"
+                className="inline-flex items-center gap-2 rounded-lg border border-neutral-950 bg-neutral-950 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(0,0,0,0.16)] transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:border-neutral-300 disabled:bg-neutral-300 disabled:shadow-none"
                 disabled={confirmedCount === 0 || isDownloading}
                 onClick={downloadConfirmed}
                 type="button"
               >
+                <DownloadIcon />
                 {isDownloading ? "Downloading..." : "Download Selected"}
               </button>
             </div>
           </div>
 
           {rows.length === 0 ? (
-            <div className="border border-dashed border-neutral-300 px-5 py-14 text-center text-sm text-neutral-500">
-              Start with Text Search above, or open Other import methods.
+            <div className="mt-7 flex flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-300 px-5 py-16 text-center">
+              <EmptyStateIcon />
+              <h3 className="mt-5 text-base font-semibold text-neutral-900">No results yet</h3>
+              <p className="mt-2 text-sm text-neutral-500">
+                Start with Text Search above, or open Other import methods.
+              </p>
             </div>
           ) : (
-            <div className="divide-y divide-neutral-200 border border-neutral-200">
+            <div className="mt-7 flex flex-col gap-4">
               {rows.map((row) => (
                 <ResultRow key={row.id} row={row} updateRow={updateRow} />
               ))}
@@ -470,6 +510,149 @@ export default function Home() {
         </section>
       </div>
     </main>
+  );
+}
+
+function IconBadge({
+  children,
+  tone = "light",
+}: {
+  children: ReactNode;
+  tone?: "dark" | "light";
+}) {
+  const classes =
+    tone === "dark"
+      ? "bg-neutral-950 text-white shadow-[0_10px_20px_rgba(0,0,0,0.18)]"
+      : "border border-neutral-200 bg-white text-neutral-950";
+
+  return (
+    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${classes}`}>
+      {children}
+    </span>
+  );
+}
+
+function StatItem({
+  icon,
+  label,
+  value,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: number;
+}) {
+  return (
+    <span className="inline-flex items-center gap-2 whitespace-nowrap">
+      <span className="text-neutral-950">{icon}</span>
+      <span className="text-neutral-950">{value}</span>
+      <span>{label}</span>
+    </span>
+  );
+}
+
+function StatDivider() {
+  return <span className="hidden h-5 w-px bg-neutral-200 sm:block" />;
+}
+
+function SearchIcon() {
+  return (
+    <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="2" />
+      <path d="m16 16 4 4" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function SearchSmallIcon() {
+  return (
+    <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="2" />
+      <path d="m16 16 4 4" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function RowsIcon() {
+  return (
+    <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+      <path d="M8 7h12M8 12h12M8 17h12" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+      <path d="M4 7h.01M4 12h.01M4 17h.01" stroke="currentColor" strokeLinecap="round" strokeWidth="3" />
+    </svg>
+  );
+}
+
+function SelectedIcon() {
+  return (
+    <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2" />
+      <path d="m8.5 12 2.3 2.3 4.7-5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function UploadIcon() {
+  return (
+    <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
+      <path d="M7 17.5H6a4 4 0 0 1-.3-8A6 6 0 0 1 17 7.5a4.5 4.5 0 0 1 .5 9H17" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+      <path d="M12 12v7M9 15l3-3 3 3" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function GridIcon() {
+  return (
+    <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
+      <path d="M5 5h5v5H5zM14 5h5v5h-5zM5 14h5v5H5zM14 14h5v5h-5z" stroke="currentColor" strokeLinejoin="round" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function ChevronIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-5 w-5 text-neutral-500 transition-transform group-open:rotate-180"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <path d="m7 10 5 5 5-5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+      <path d="m5 12 4 4 10-10" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+      <path d="M12 4v10M8 10l4 4 4-4M5 20h14" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function InfoIcon() {
+  return (
+    <svg aria-hidden="true" className="h-4 w-4 shrink-0 text-neutral-500" fill="none" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2" />
+      <path d="M12 11v5M12 8h.01" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function EmptyStateIcon() {
+  return (
+    <svg aria-hidden="true" className="h-16 w-16 text-neutral-400" fill="none" viewBox="0 0 64 64">
+      <rect height="34" rx="5" stroke="currentColor" strokeWidth="2" width="34" x="14" y="12" />
+      <circle cx="33" cy="31" r="10" stroke="currentColor" strokeWidth="2" />
+      <path d="m41 39 9 9" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+      <path d="M10 28h3M51 24h3M21 52v3M50 41h2M13 45h2" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+    </svg>
   );
 }
 
@@ -493,86 +676,90 @@ function ResultRow({
   const selected = row.candidates[row.selectedIndex];
 
   return (
-    <div className="grid gap-5 p-4 md:grid-cols-[minmax(160px,1fr)_88px_minmax(260px,1.6fr)_120px] md:items-center md:p-5">
-      <div className="min-w-0">
-        <div className="text-xs font-medium uppercase tracking-[0.14em] text-neutral-400">Input</div>
-        <div className="mt-2 break-words text-sm font-medium leading-6 text-neutral-950">
-          {row.rawInput ?? row.album}
-        </div>
-        <div className="mt-1 text-sm text-neutral-500">
-          {row.rawInput ? "Free-text search" : row.artist}
-        </div>
-      </div>
-
-      <div className="flex h-24 w-24 items-center justify-center border border-neutral-200 bg-neutral-50 md:h-20 md:w-20">
-        {selected ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            alt={`${selected.artistName} - ${selected.collectionName}`}
-            className="h-full w-full object-cover"
-            src={selected.artworkUrl}
-          />
-        ) : (
-          <span className="text-xs text-neutral-400">No art</span>
-        )}
-      </div>
-
-      <div className="min-w-0">
-        {row.candidates.length > 0 ? (
-          <div className="flex flex-col gap-3">
-            <div>
-              <div className="truncate text-base font-semibold text-neutral-950">
-                {selected?.collectionName}
-              </div>
-              <div className="mt-1 truncate text-sm text-neutral-600">
-                {selected?.artistName}
-                {selected?.releaseDate ? ` / ${selected.releaseDate.slice(0, 4)}` : ""}
-              </div>
-            </div>
-            <select
-              className="w-full border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-950 outline-none transition focus:border-neutral-950"
-              onChange={(event) =>
-                updateRow(row.id, {
-                  selectedIndex: Number(event.target.value),
-                  confirmed: false,
-                })
-              }
-              value={row.selectedIndex}
-            >
-              {row.candidates.map((candidate, index) => (
-                <option key={candidate.collectionId} value={index}>
-                  {candidate.artistName} - {candidate.collectionName}
-                </option>
-              ))}
-            </select>
-            <div className="truncate text-xs text-neutral-500">
-              {selected?.primaryGenreName ?? "Album"}
-              {selected?.releaseDate ? ` / ${selected.releaseDate.slice(0, 4)}` : ""}
-              {selected?.trackCount ? ` / ${selected.trackCount} tracks` : ""}
-            </div>
+    <article className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-[0_12px_34px_rgba(0,0,0,0.045)] transition hover:border-neutral-300 sm:p-5">
+      <div className="grid gap-5 lg:grid-cols-[minmax(170px,0.9fr)_112px_minmax(280px,1.8fr)_150px] lg:items-center">
+        <div className="min-w-0 rounded-xl bg-neutral-50 p-4">
+          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">Input</div>
+          <div className="mt-3 break-words text-sm font-semibold leading-6 text-neutral-950">
+            {row.rawInput ?? row.album}
           </div>
-        ) : (
-          <span className="text-sm text-neutral-500">No album result</span>
-        )}
-      </div>
-
-      <div className="flex items-center justify-between gap-4 md:flex-col md:items-start">
-        <div>
-          <StatusBadge confirmed={row.confirmed} status={row.status} />
-          {row.message ? <div className="mt-2 text-xs text-neutral-500">{row.message}</div> : null}
+          <div className="mt-1 text-sm font-normal text-neutral-500">
+            {row.rawInput ? "Free-text search" : row.artist}
+          </div>
         </div>
-        <label className="flex items-center gap-2 text-sm font-medium text-neutral-950">
-          <input
-            checked={row.confirmed}
-            className="h-4 w-4 accent-neutral-950"
-            disabled={row.status !== "found"}
-            onChange={(event) => updateRow(row.id, { confirmed: event.target.checked })}
-            type="checkbox"
-          />
-          Select
-        </label>
+
+        <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50">
+          {selected ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              alt={`${selected.artistName} - ${selected.collectionName}`}
+              className="h-full w-full object-cover"
+              src={selected.artworkUrl}
+            />
+          ) : (
+            <span className="text-xs text-neutral-400">No art</span>
+          )}
+        </div>
+
+        <div className="min-w-0">
+          {row.candidates.length > 0 ? (
+            <div className="flex flex-col gap-4">
+              <div>
+                <div className="truncate text-xl font-semibold text-neutral-950">
+                  {selected?.collectionName}
+                </div>
+                <div className="mt-1 truncate text-sm font-normal text-neutral-600">
+                  {selected?.artistName}
+                  {selected?.releaseDate ? ` / ${selected.releaseDate.slice(0, 4)}` : ""}
+                </div>
+              </div>
+              <select
+                className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-medium text-neutral-950 outline-none transition focus:border-neutral-950 focus:ring-4 focus:ring-neutral-950/5"
+                onChange={(event) =>
+                  updateRow(row.id, {
+                    selectedIndex: Number(event.target.value),
+                    confirmed: false,
+                  })
+                }
+                value={row.selectedIndex}
+              >
+                {row.candidates.map((candidate, index) => (
+                  <option key={candidate.collectionId} value={index}>
+                    {candidate.artistName} - {candidate.collectionName}
+                  </option>
+                ))}
+              </select>
+              <div className="truncate text-sm text-neutral-500">
+                {selected?.primaryGenreName ?? "Album"}
+                {selected?.releaseDate ? ` / ${selected.releaseDate.slice(0, 4)}` : ""}
+                {selected?.trackCount ? ` / ${selected.trackCount} tracks` : ""}
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-5 text-sm text-neutral-500">
+              No album result
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between gap-4 border-t border-neutral-100 pt-4 lg:flex-col lg:items-start lg:border-t-0 lg:pt-0">
+          <div>
+            <StatusBadge confirmed={row.confirmed} status={row.status} />
+            {row.message ? <div className="mt-2 text-xs text-neutral-500">{row.message}</div> : null}
+          </div>
+          <label className="inline-flex items-center gap-2 rounded-full border border-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-950 transition has-[:checked]:border-neutral-950 has-[:checked]:bg-neutral-950 has-[:checked]:text-white">
+            <input
+              checked={row.confirmed}
+              className="h-4 w-4 accent-neutral-950"
+              disabled={row.status !== "found"}
+              onChange={(event) => updateRow(row.id, { confirmed: event.target.checked })}
+              type="checkbox"
+            />
+            Select
+          </label>
+        </div>
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -585,7 +772,7 @@ function StatusBadge({
 }) {
   if (confirmed && status === "found") {
     return (
-      <span className="inline-flex border border-neutral-950 bg-neutral-950 px-2.5 py-1 text-xs font-medium uppercase tracking-[0.12em] text-white">
+      <span className="inline-flex rounded-full border border-neutral-950 bg-neutral-950 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-white">
         Selected
       </span>
     );
@@ -614,7 +801,7 @@ function StatusBadge({
   };
 
   return (
-    <span className={`inline-flex border px-2.5 py-1 text-xs font-medium uppercase tracking-[0.12em] ${styles[status]}`}>
+    <span className={`inline-flex rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] ${styles[status]}`}>
       {label[status]}
     </span>
   );
