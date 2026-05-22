@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { type ChangeEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { parseAlbumCsv, parseAlbumTextImport } from "@/lib/csv";
 import type { AlbumInputRow, AlbumWorkRow, SearchCandidate } from "@/lib/types";
@@ -293,7 +294,14 @@ export default function Home() {
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-7 px-4 py-8 sm:px-8 lg:px-10 lg:py-12">
         <header className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.26em] text-neutral-600">COVERDROP</p>
+            <Image
+              alt="Coverdrop brand logo"
+              className="h-12 w-auto max-w-[78vw] select-none object-contain sm:h-14 md:h-16"
+              height={1566}
+              priority
+              src="/coverdrop-logo.png"
+              width={3230}
+            />
             <h1 className="mt-6 text-4xl font-bold tracking-normal text-neutral-950 sm:text-5xl">
               Album cover search
             </h1>
@@ -501,7 +509,7 @@ export default function Home() {
               </p>
             </div>
           ) : (
-            <div className="mt-7 flex flex-col gap-4">
+            <div className="mt-7 overflow-hidden rounded-2xl border border-neutral-200">
               {rows.map((row) => (
                 <ResultRow key={row.id} row={row} updateRow={updateRow} />
               ))}
@@ -676,90 +684,86 @@ function ResultRow({
   const selected = row.candidates[row.selectedIndex];
 
   return (
-    <article className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-[0_12px_34px_rgba(0,0,0,0.045)] transition hover:border-neutral-300 sm:p-5">
-      <div className="grid gap-5 lg:grid-cols-[minmax(170px,0.9fr)_112px_minmax(280px,1.8fr)_150px] lg:items-center">
-        <div className="min-w-0 rounded-xl bg-neutral-50 p-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">Input</div>
-          <div className="mt-3 break-words text-sm font-semibold leading-6 text-neutral-950">
-            {row.rawInput ?? row.album}
-          </div>
-          <div className="mt-1 text-sm font-normal text-neutral-500">
-            {row.rawInput ? "Free-text search" : row.artist}
-          </div>
+    <div className="grid gap-5 border-b border-neutral-100 p-4 last:border-b-0 md:grid-cols-[minmax(160px,1fr)_88px_minmax(260px,1.6fr)_120px] md:items-center md:p-5">
+      <div className="min-w-0">
+        <div className="text-xs font-medium uppercase tracking-[0.14em] text-neutral-400">Input</div>
+        <div className="mt-2 break-words text-sm font-medium leading-6 text-neutral-950">
+          {row.rawInput ?? row.album}
         </div>
-
-        <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50">
-          {selected ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              alt={`${selected.artistName} - ${selected.collectionName}`}
-              className="h-full w-full object-cover"
-              src={selected.artworkUrl}
-            />
-          ) : (
-            <span className="text-xs text-neutral-400">No art</span>
-          )}
-        </div>
-
-        <div className="min-w-0">
-          {row.candidates.length > 0 ? (
-            <div className="flex flex-col gap-4">
-              <div>
-                <div className="truncate text-xl font-semibold text-neutral-950">
-                  {selected?.collectionName}
-                </div>
-                <div className="mt-1 truncate text-sm font-normal text-neutral-600">
-                  {selected?.artistName}
-                  {selected?.releaseDate ? ` / ${selected.releaseDate.slice(0, 4)}` : ""}
-                </div>
-              </div>
-              <select
-                className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-medium text-neutral-950 outline-none transition focus:border-neutral-950 focus:ring-4 focus:ring-neutral-950/5"
-                onChange={(event) =>
-                  updateRow(row.id, {
-                    selectedIndex: Number(event.target.value),
-                    confirmed: false,
-                  })
-                }
-                value={row.selectedIndex}
-              >
-                {row.candidates.map((candidate, index) => (
-                  <option key={candidate.collectionId} value={index}>
-                    {candidate.artistName} - {candidate.collectionName}
-                  </option>
-                ))}
-              </select>
-              <div className="truncate text-sm text-neutral-500">
-                {selected?.primaryGenreName ?? "Album"}
-                {selected?.releaseDate ? ` / ${selected.releaseDate.slice(0, 4)}` : ""}
-                {selected?.trackCount ? ` / ${selected.trackCount} tracks` : ""}
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-5 text-sm text-neutral-500">
-              No album result
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center justify-between gap-4 border-t border-neutral-100 pt-4 lg:flex-col lg:items-start lg:border-t-0 lg:pt-0">
-          <div>
-            <StatusBadge confirmed={row.confirmed} status={row.status} />
-            {row.message ? <div className="mt-2 text-xs text-neutral-500">{row.message}</div> : null}
-          </div>
-          <label className="inline-flex items-center gap-2 rounded-full border border-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-950 transition has-[:checked]:border-neutral-950 has-[:checked]:bg-neutral-950 has-[:checked]:text-white">
-            <input
-              checked={row.confirmed}
-              className="h-4 w-4 accent-neutral-950"
-              disabled={row.status !== "found"}
-              onChange={(event) => updateRow(row.id, { confirmed: event.target.checked })}
-              type="checkbox"
-            />
-            Select
-          </label>
+        <div className="mt-1 text-sm text-neutral-500">
+          {row.rawInput ? "Free-text search" : row.artist}
         </div>
       </div>
-    </article>
+
+      <div className="flex h-24 w-24 items-center justify-center border border-neutral-200 bg-neutral-50 md:h-20 md:w-20">
+        {selected ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            alt={`${selected.artistName} - ${selected.collectionName}`}
+            className="h-full w-full object-cover"
+            src={selected.artworkUrl}
+          />
+        ) : (
+          <span className="text-xs text-neutral-400">No art</span>
+        )}
+      </div>
+
+      <div className="min-w-0">
+        {row.candidates.length > 0 ? (
+          <div className="flex flex-col gap-3">
+            <div>
+              <div className="truncate text-base font-semibold text-neutral-950">
+                {selected?.collectionName}
+              </div>
+              <div className="mt-1 truncate text-sm text-neutral-600">
+                {selected?.artistName}
+                {selected?.releaseDate ? ` / ${selected.releaseDate.slice(0, 4)}` : ""}
+              </div>
+            </div>
+            <select
+              className="w-full border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-950 outline-none transition focus:border-neutral-950"
+              onChange={(event) =>
+                updateRow(row.id, {
+                  selectedIndex: Number(event.target.value),
+                  confirmed: false,
+                })
+              }
+              value={row.selectedIndex}
+            >
+              {row.candidates.map((candidate, index) => (
+                <option key={candidate.collectionId} value={index}>
+                  {candidate.artistName} - {candidate.collectionName}
+                </option>
+              ))}
+            </select>
+            <div className="truncate text-xs text-neutral-500">
+              {selected?.primaryGenreName ?? "Album"}
+              {selected?.releaseDate ? ` / ${selected.releaseDate.slice(0, 4)}` : ""}
+              {selected?.trackCount ? ` / ${selected.trackCount} tracks` : ""}
+            </div>
+          </div>
+        ) : (
+          <span className="text-sm text-neutral-500">No album result</span>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between gap-4 md:flex-col md:items-start">
+        <div>
+          <StatusBadge confirmed={row.confirmed} status={row.status} />
+          {row.message ? <div className="mt-2 text-xs text-neutral-500">{row.message}</div> : null}
+        </div>
+        <label className="flex items-center gap-2 text-sm font-medium text-neutral-950">
+          <input
+            checked={row.confirmed}
+            className="h-4 w-4 accent-neutral-950"
+            disabled={row.status !== "found"}
+            onChange={(event) => updateRow(row.id, { confirmed: event.target.checked })}
+            type="checkbox"
+          />
+          Select
+        </label>
+      </div>
+    </div>
   );
 }
 
@@ -772,7 +776,7 @@ function StatusBadge({
 }) {
   if (confirmed && status === "found") {
     return (
-      <span className="inline-flex rounded-full border border-neutral-950 bg-neutral-950 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-white">
+      <span className="inline-flex border border-neutral-950 bg-neutral-950 px-2.5 py-1 text-xs font-medium uppercase tracking-[0.12em] text-white">
         Selected
       </span>
     );
@@ -801,7 +805,7 @@ function StatusBadge({
   };
 
   return (
-    <span className={`inline-flex rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] ${styles[status]}`}>
+    <span className={`inline-flex border px-2.5 py-1 text-xs font-medium uppercase tracking-[0.12em] ${styles[status]}`}>
       {label[status]}
     </span>
   );
